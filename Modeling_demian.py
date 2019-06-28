@@ -1,6 +1,4 @@
 
-
-
 import pickle
 from sklearn.model_selection import train_test_split
 import xgboost as xgb
@@ -36,6 +34,7 @@ end = datetime.now()
 from xgboost import XGBClassifier
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.model_selection import validation_curve
 params = {
         'min_child_weight': [1, 5, 10],
         'gamma': [0.5, 1, 1.5, 2, 5],

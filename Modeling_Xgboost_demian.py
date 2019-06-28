@@ -1,3 +1,11 @@
+import torch
+torch.cuda.is_available()
+ 
+from google.colab import auth
+auth.authenticate_user()
+
+from google.colab import drive
+drive.mount('/content/gdrive')
 
 import pickle
 from sklearn.model_selection import train_test_split
@@ -5,19 +13,6 @@ import xgboost as xgb
 from datetime import datetime
 import pandas as pd
 
-with open('C:/DATA/L.point2019/derivation_data/raw4.pickle', 'rb') as f:
-    raw = pickle.load(f)
-    
-    
-raw['DAY']=raw['DAY'].astype(str)
-raw['MONTH']=raw['MONTH'].astype(str)
-
-encode_df2=pd.get_dummies(raw[['DAY','MONTH']])
-
-# join the encoded dataframe
-raw=raw.join(encode_df2)
-raw = raw.drop(['MONTH','DAY'], axis = 1)
-    
 train_set, test_set = train_test_split( raw , test_size=0.3, random_state=42)
 
 train_y = train_set['y']
@@ -26,24 +21,18 @@ train_X = train_set.drop(['y'], axis = 1)
 test_y = test_set['y']
 test_X = test_set.drop(['y'], axis = 1)
 
-start = datetime.now()
-gbm = xgb.XGBClassifier(tree_method='gpu_hist').fit(train_X, train_y)
-predictions = gbm.predict(test_X)
-end = datetime.now()
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+train_X = scaler.fit_transform(train_X)
+test_X = scaler.fit_transform(test_X)
 
 from xgboost import XGBClassifier
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import validation_curve
-params = {
-        'min_child_weight': [1, 5, 10],
-        'gamma': [0.5, 1, 1.5, 2, 5],
-        'subsample': [0.6, 0.8, 1.0],
-        'colsample_bytree': [0.6, 0.8, 1.0],
-        'max_depth': [3, 4, 5]
-        }
 
 X, y = train_X, train_y
+
+from sklearn.model_selection import validation_curve
 
 # tuning hyper parameters
 # hidden_layer_sizes
@@ -84,7 +73,7 @@ def search(name,param_range):
   plt.tight_layout()
   plt.legend(loc="best")
   plt.show()
-  
+
 search('min_child_weight',np.arange(1,10,2))
 search('gamma',np.arange(0.5,3,0.5))
 search('subsample',np.arange(0.6,1.2,0.2))
@@ -93,3 +82,12 @@ search('max_depth',np.arange(3,15,1))
 search('eta',[0.01,0.05,0.1,0.3,0.5,0.7])
 search('n_estimators',np.arange(100,2300,100))
 search('base_score',np.arange(0.1,1,0.1))
+
+start = datetime.now()
+gbm = xgb.XGBClassifier(n_estimator = 40,min_samples_leaf=3, tree_method = 'gpu_hist').fit(train_X, train_y)
+predictions = gbm.predict(test_X)
+end = datetime.now()
+
+sum(test_y == predictions)/len(predictions)
+
+dict(zip(gbm.feature_importances_,list(X)))
